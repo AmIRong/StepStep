@@ -36,6 +36,51 @@ class core
 		}
 		return self::$_app;
 	}
+	
+	public static function autoload($class) {
+	    $class = strtolower($class);
+	    if(strpos($class, '_') !== false) {
+	        list($folder) = explode('_', $class);
+	        $file = 'class/'.$folder.'/'.substr($class, strlen($folder) + 1);
+	    } else {
+	        $file = 'class/'.$class;
+	    }
+	
+	    try {
+	
+	        self::import($file);
+	        return true;
+	
+	    } catch (Exception $exc) {
+
+	    }
+	}
+	
+	public static function import($name, $folder = '', $force = true) {
+	    $key = $folder.$name;
+	    if(!isset(self::$_imports[$key])) {
+	        $path = DISCUZ_ROOT.'/source/'.$folder;
+	        if(strpos($name, '/') !== false) {
+	            $pre = basename(dirname($name));
+	            $filename = dirname($name).'/'.$pre.'_'.basename($name).'.php';
+	        } else {
+	            $filename = $name.'.php';
+	        }
+	
+	        if(is_file($path.'/'.$filename)) {
+	            include $path.'/'.$filename;
+	            self::$_imports[$key] = true;
+	
+	            return true;
+	        } elseif(!$force) {
+	            return false;
+	        } else {
+	            throw new Exception('Oops! System file lost: '.$filename);
+	        }
+	    }
+	    return true;
+	}
+	
 }
 
 class C extends core {}
