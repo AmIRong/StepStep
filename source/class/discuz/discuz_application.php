@@ -347,6 +347,18 @@ class discuz_application extends discuz_base{
 	    }
 	
 	}
+	public function init() {
+	    if(!$this->initated) {
+	        $this->_init_db();
+	        $this->_init_setting();
+	        $this->_init_user();
+	        $this->_init_session();
+	        $this->_init_mobile();
+	        $this->_init_cron();
+	        $this->_init_misc();
+	    }
+	    $this->initated = true;
+	}
 	
 
 }
