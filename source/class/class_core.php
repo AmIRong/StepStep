@@ -29,6 +29,11 @@ class core
 	private static $_imports;
 	private static $_app;
 	private static $_memory;
+	
+	public static function app() {
+	    return self::$_app;
+	}
+	
 
 	public static function creatapp() {
 		if(!is_object(self::$_app)) {
