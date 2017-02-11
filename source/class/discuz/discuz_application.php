@@ -229,7 +229,99 @@ class discuz_application extends discuz_base{
 	    return $this->var['PHP_SELF'];
 	}
 	
-
+	private function _init_config() {
+	
+	    $_config = array();
+	    @include DISCUZ_ROOT.'./config/config_global.php';
+	    if(empty($_config)) {
+	        if(!file_exists(DISCUZ_ROOT.'./data/install.lock')) {
+	            header('location: install');
+	            exit;
+	        } else {
+	            system_error('config_notfound');
+	        }
+	    }
+	
+	    if(empty($_config['security']['authkey'])) {
+	        $_config['security']['authkey'] = md5($_config['cookie']['cookiepre'].$_config['db'][1]['dbname']);
+	    }
+	
+	    if(empty($_config['debug']) || !file_exists(libfile('function/debug'))) {
+	        define('DISCUZ_DEBUG', false);
+	        error_reporting(0);
+	    } elseif($_config['debug'] === 1 || $_config['debug'] === 2 || !empty($_REQUEST['debug']) && $_REQUEST['debug'] === $_config['debug']) {
+	        define('DISCUZ_DEBUG', true);
+	        error_reporting(E_ERROR);
+	        if($_config['debug'] === 2) {
+	            error_reporting(E_ALL);
+	        }
+	    } else {
+	        define('DISCUZ_DEBUG', false);
+	        error_reporting(0);
+	    }
+	    define('STATICURL', !empty($_config['output']['staticurl']) ? $_config['output']['staticurl'] : 'static/');
+	    $this->var['staticurl'] = STATICURL;
+	
+	    $this->config = & $_config;
+	    $this->var['config'] = & $_config;
+	
+	    if(substr($_config['cookie']['cookiepath'], 0, 1) != '/') {
+	        $this->var['config']['cookie']['cookiepath'] = '/'.$this->var['config']['cookie']['cookiepath'];
+	    }
+	    $this->var['config']['cookie']['cookiepre'] = $this->var['config']['cookie']['cookiepre'].substr(md5($this->var['config']['cookie']['cookiepath'].'|'.$this->var['config']['cookie']['cookiedomain']), 0, 4).'_';
+	
+	
+	}
+	private function _init_input() {
+	    if (isset($_GET['GLOBALS']) ||isset($_POST['GLOBALS']) ||  isset($_COOKIE['GLOBALS']) || isset($_FILES['GLOBALS'])) {
+	        system_error('request_tainting');
+	    }
+	
+	    if(MAGIC_QUOTES_GPC) {
+	        $_GET = dstripslashes($_GET);
+	        $_POST = dstripslashes($_POST);
+	        $_COOKIE = dstripslashes($_COOKIE);
+	    }
+	
+	    $prelength = strlen($this->config['cookie']['cookiepre']);
+	    foreach($_COOKIE as $key => $val) {
+	        if(substr($key, 0, $prelength) == $this->config['cookie']['cookiepre']) {
+	            $this->var['cookie'][substr($key, $prelength)] = $val;
+	        }
+	    }
+	
+	
+	    if($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST)) {
+	        $_GET = array_merge($_GET, $_POST);
+	    }
+	
+	    if(isset($_GET['page'])) {
+	        $_GET['page'] = rawurlencode($_GET['page']);
+	    }
+	
+	    if(!(!empty($_GET['handlekey']) && preg_match('/^\w+$/', $_GET['handlekey']))) {
+	        unset($_GET['handlekey']);
+	    }
+	
+	    if(!empty($this->var['config']['input']['compatible'])) {
+	        foreach($_GET as $k => $v) {
+	            $this->var['gp_'.$k] = daddslashes($v);
+	        }
+	    }
+	
+	    $this->var['mod'] = empty($_GET['mod']) ? '' : dhtmlspecialchars($_GET['mod']);
+	    $this->var['inajax'] = empty($_GET['inajax']) ? 0 : (empty($this->var['config']['output']['ajaxvalidate']) ? 1 : ($_SERVER['REQUEST_METHOD'] == 'GET' && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest' || $_SERVER['REQUEST_METHOD'] == 'POST' ? 1 : 0));
+	    $this->var['page'] = empty($_GET['page']) ? 1 : max(1, intval($_GET['page']));
+	    $this->var['sid'] = $this->var['cookie']['sid'] = isset($this->var['cookie']['sid']) ? dhtmlspecialchars($this->var['cookie']['sid']) : '';
+	
+	    if(empty($this->var['cookie']['saltkey'])) {
+	        $this->var['cookie']['saltkey'] = random(8);
+	        dsetcookie('saltkey', $this->var['cookie']['saltkey'], 86400 * 30, 1, 1);
+	    }
+	    $this->var['authkey'] = md5($this->var['config']['security']['authkey'].$this->var['cookie']['saltkey']);
+	
+	}
+	
 
 }
 
