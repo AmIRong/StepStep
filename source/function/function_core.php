@@ -269,6 +269,9 @@ function checkmobile() {
         return false;
     }
 }
+function savecache($cachename, $data) {
+    C::t('common_syscache')->insert($cachename, $data);
+}
 
 
 

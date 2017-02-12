@@ -112,6 +112,78 @@ class discuz_database {
 	public static function checkquery($sql) {
 	    return discuz_database_safecheck::checkquery($sql);
 	}
+	public static function fetch_first($sql, $arg = array(), $silent = false) {
+	    $res = self::query($sql, $arg, $silent, false);
+	    $ret = self::$db->fetch_array($res);
+	    self::$db->free_result($res);
+	    return $ret ? $ret : array();
+	}
+	public static function insert($table, $data, $return_insert_id = false, $replace = false, $silent = false) {
+	
+	    $sql = self::implode($data);
+	
+	    $cmd = $replace ? 'REPLACE INTO' : 'INSERT INTO';
+	
+	    $table = self::table($table);
+	    $silent = $silent ? 'SILENT' : '';
+	
+	    return self::query("$cmd $table SET $sql", null, $silent, !$return_insert_id);
+	}
+	public static function implode($array, $glue = ',') {
+	    $sql = $comma = '';
+	    $glue = ' ' . trim($glue) . ' ';
+	    foreach ($array as $k => $v) {
+	        $sql .= $comma . self::quote_field($k) . '=' . self::quote($v);
+	        $comma = $glue;
+	    }
+	    return $sql;
+	}
+	public static function format($sql, $arg) {
+	    $count = substr_count($sql, '%');
+	    if (!$count) {
+	        return $sql;
+	    } elseif ($count > count($arg)) {
+	        throw new DbException('SQL string format error! This SQL need "' . $count . '" vars to replace into.', 0, $sql);
+	    }
+	
+	    $len = strlen($sql);
+	    $i = $find = 0;
+	    $ret = '';
+	    while ($i <= $len && $find < $count) {
+	        if ($sql{$i} == '%') {
+	            $next = $sql{$i + 1};
+	            if ($next == 't') {
+	                $ret .= self::table($arg[$find]);
+	            } elseif ($next == 's') {
+	                $ret .= self::quote(is_array($arg[$find]) ? serialize($arg[$find]) : (string) $arg[$find]);
+	            } elseif ($next == 'f') {
+	                $ret .= sprintf('%F', $arg[$find]);
+	            } elseif ($next == 'd') {
+	                $ret .= dintval($arg[$find]);
+	            } elseif ($next == 'i') {
+	                $ret .= $arg[$find];
+	            } elseif ($next == 'n') {
+	                if (!empty($arg[$find])) {
+	                    $ret .= is_array($arg[$find]) ? implode(',', self::quote($arg[$find])) : self::quote($arg[$find]);
+	                } else {
+	                    $ret .= '0';
+	                }
+	            } else {
+	                $ret .= self::quote($arg[$find]);
+	            }
+	            $i++;
+	            $find++;
+	        } else {
+	            $ret .= $sql{$i};
+	        }
+	        $i++;
+	    }
+	    if ($i < $len) {
+	        $ret .= substr($sql, $i);
+	    }
+	    return $ret;
+	}
+	
 }
 
 class discuz_database_safecheck {
