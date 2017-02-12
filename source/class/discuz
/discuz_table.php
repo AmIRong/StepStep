@@ -32,6 +32,8 @@ class discuz_table extends discuz_base
 		$this->_init_extend();
 		parent::__construct();
 	}
+	protected function _init_extend() {
+	}
 }
 
 ?>

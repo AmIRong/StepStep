@@ -194,33 +194,22 @@ function memory($cmd, $key='', $value='', $ttl = 0, $prefix = '') {
     }
     return null;
 }
-function dsetcookie($var, $value = '', $life = 0, $prefix = 1, $httponly = false) {
-
+function ipbanned($onlineip) {
     global $_G;
 
-    $config = $_G['config']['cookie'];
-
-    $_G['cookie'][$var] = $value;
-    $var = ($prefix ? $config['cookiepre'] : '').$var;
-    $_COOKIE[$var] = $value;
-
-    if($value == '' || $life < 0) {
-        $value = '';
-        $life = -1;
+    if($_G['setting']['ipaccess'] && !ipaccess($onlineip, $_G['setting']['ipaccess'])) {
+        return TRUE;
     }
 
-    if(defined('IN_MOBILE')) {
-        $httponly = false;
-    }
-
-    $life = $life > 0 ? getglobal('timestamp') + $life : ($life < 0 ? getglobal('timestamp') - 31536000 : 0);
-    $path = $httponly && PHP_VERSION < '5.2.0' ? $config['cookiepath'].'; HttpOnly' : $config['cookiepath'];
-
-    $secure = $_SERVER['SERVER_PORT'] == 443 ? 1 : 0;
-    if(PHP_VERSION < '5.2.0') {
-        setcookie($var, $value, $life, $path, $config['cookiedomain'], $secure);
+    loadcache('ipbanned');
+    if(empty($_G['cache']['ipbanned'])) {
+        return FALSE;
     } else {
-        setcookie($var, $value, $life, $path, $config['cookiedomain'], $secure, $httponly);
+        if($_G['cache']['ipbanned']['expiration'] < TIMESTAMP) {
+            require_once libfile('function/cache');
+            updatecache('ipbanned');
+        }
+        return preg_match("/^(".$_G['cache']['ipbanned']['regexp'].")$/", $onlineip);
     }
 }
 
