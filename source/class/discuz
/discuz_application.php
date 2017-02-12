@@ -484,6 +484,108 @@ class discuz_application extends discuz_base{
 	    }
 	    setglobal('member', array( 'uid' => 0, 'username' => $username, 'adminid' => 0, 'groupid' => $groupid, 'credits' => 0, 'timeoffset' => 9999));
 	}
+	private function _init_mobile() {
+	    if(!$this->init_mobile) {
+	        return false;
+	    }
+	
+	    if(!$this->var['setting'] || !$this->var['setting']['mobile']['allowmobile'] || !is_array($this->var['setting']['mobile']) || IS_ROBOT) {
+	        $nomobile = true;
+	        $unallowmobile = true;
+	    }
+	
+	
+	    $mobile = getgpc('mobile');
+	    $mobileflag = isset($this->var['mobiletpl'][$mobile]);
+	    if($mobile === 'no') {
+	        dsetcookie('mobile', 'no', 3600);
+	        $nomobile = true;
+	    } elseif($this->var['cookie']['mobile'] == 'no' && $mobileflag) {
+	        checkmobile();
+	        dsetcookie('mobile', '');
+	    } elseif($this->var['cookie']['mobile'] == 'no') {
+	        $nomobile = true;
+	    } elseif(!($mobile_ = checkmobile())) {
+	        $nomobile = true;
+	    }
+	    if(!$mobile || $mobile == 'yes') {
+	        $mobile = isset($mobile_) ? $mobile_ : 2;
+	    }
+	
+	    if(!$this->var['mobile'] && !$unallowmobile) {
+	        if($mobileflag) {
+	            dheader("Location:misc.php?mod=mobile");
+	        }
+	    }
+	
+	    if($nomobile || (!$this->var['setting']['mobile']['mobileforward'] && !$mobileflag)) {
+	        if($_SERVER['HTTP_HOST'] == $this->var['setting']['domain']['app']['mobile'] && $this->var['setting']['domain']['app']['default']) {
+	            dheader("Location:http://".$this->var['setting']['domain']['app']['default'].$_SERVER['REQUEST_URI']);
+	            return false;
+	        } else {
+	            return false;
+	        }
+	    }
+	
+	    if(strpos($this->var['setting']['domain']['defaultindex'], CURSCRIPT) !== false && CURSCRIPT != 'forum' && !$_GET['mod']) {
+	        if($this->var['setting']['domain']['app']['mobile']) {
+	            $mobileurl = 'http://'.$this->var['setting']['domain']['app']['mobile'];
+	        } else {
+	            if($this->var['setting']['domain']['app']['forum']) {
+	                $mobileurl = 'http://'.$this->var['setting']['domain']['app']['forum'].'?mobile=yes';
+	            } else {
+	                $mobileurl = $this->var['siteurl'].'forum.php?mobile=yes';
+	            }
+	        }
+	        dheader("location:$mobileurl");
+	    }
+	    if($mobile === '3' && empty($this->var['setting']['mobile']['wml'])) {
+	        return false;
+	    }
+	    define('IN_MOBILE', isset($this->var['mobiletpl'][$mobile]) ? $mobile : '2');
+	    setglobal('gzipcompress', 0);
+	
+	    $arr = array();
+	    foreach(array_keys($this->var['mobiletpl']) as $mobiletype) {
+	        $arr[] = '&mobile='.$mobiletype;
+	        $arr[] = 'mobile='.$mobiletype;
+	    }
+	    $arr = array_merge(array(strstr($_SERVER['QUERY_STRING'], '&simpletype'), strstr($_SERVER['QUERY_STRING'], 'simpletype')), $arr);
+	    $query_sting_tmp = str_replace($arr, '', $_SERVER['QUERY_STRING']);
+	    $this->var['setting']['mobile']['nomobileurl'] = ($this->var['setting']['domain']['app']['forum'] ? 'http://'.$this->var['setting']['domain']['app']['forum'].'/' : $this->var['siteurl']).$this->var['basefilename'].($query_sting_tmp ? '?'.$query_sting_tmp.'&' : '?').'mobile=no';
+	
+	    $this->var['setting']['lazyload'] = 0;
+	
+	    if('utf-8' != CHARSET) {
+	        if(strtolower($_SERVER['REQUEST_METHOD']) === 'post') {
+	            foreach($_POST AS $pk => $pv) {
+	                if(!is_numeric($pv)) {
+	                    $_GET[$pk] = $_POST[$pk] = $this->mobile_iconv_recurrence($pv);
+	                    if(!empty($this->var['config']['input']['compatible'])) {
+	                        $this->var['gp_'.$pk] = daddslashes($_GET[$pk]);
+	                    }
+	                }
+	            }
+	        }
+	    }
+	
+	
+	    if(!$this->var['setting']['mobile']['mobilesimpletype']) {
+	        $this->var['setting']['imagemaxwidth'] = 224;
+	    }
+	
+	    $this->var['setting']['regstatus'] = $this->var['setting']['mobile']['mobileregister'] ? $this->var['setting']['regstatus'] : 0 ;
+	
+	    $this->var['setting']['thumbquality'] = 50;
+	    $this->var['setting']['avatarmethod'] = 0;
+	
+	    $this->var['setting']['mobile']['simpletypeurl'] = array();
+	    $this->var['setting']['mobile']['simpletypeurl'][0] = $this->var['siteurl'].$this->var['basefilename'].($query_sting_tmp ? '?'.$query_sting_tmp.'&' : '?').'mobile=1&simpletype=no';
+	    $this->var['setting']['mobile']['simpletypeurl'][1] =  $this->var['siteurl'].$this->var['basefilename'].($query_sting_tmp ? '?'.$query_sting_tmp.'&' : '?').'mobile=1&simpletype=yes';
+	    $this->var['setting']['mobile']['simpletypeurl'][2] =  $this->var['siteurl'].$this->var['basefilename'].($query_sting_tmp ? '?'.$query_sting_tmp.'&' : '?').'mobile=2';
+	    unset($query_sting_tmp);
+	    ob_start();
+	}
 	
 
 }
