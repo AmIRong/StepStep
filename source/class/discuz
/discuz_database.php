@@ -239,6 +239,31 @@ class discuz_database_safecheck {
 	
 	    return 1;
 	}
+	public static function quote($str, $noarray = false) {
+	
+	    if (is_string($str))
+	        return '\'' . mysql_escape_string($str) . '\'';
+	
+	        if (is_int($str) or is_float($str))
+	            return '\'' . $str . '\'';
+	
+	            if (is_array($str)) {
+	                if($noarray === false) {
+	                    foreach ($str as &$v) {
+	                        $v = self::quote($v, true);
+	                    }
+	                    return $str;
+	                } else {
+	                    return '\'\'';
+	                }
+	            }
+	
+	            if (is_bool($str))
+	                return $str ? '1' : '0';
+	
+	                return '\'\'';
+	}
+	
 	public static function query($sql, $arg = array(), $silent = false, $unbuffered = false) {
 	    if (!empty($arg)) {
 	        if (is_array($arg)) {

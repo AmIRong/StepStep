@@ -129,6 +129,19 @@ class db_driver_mysql
 	    if($result_type == 'MYSQL_ASSOC') $result_type = MYSQL_ASSOC;
 	    return mysql_fetch_array($query, $result_type);
 	}
+	
+	function table_name($tablename) {
+	    if(!empty($this->map) && !empty($this->map[$tablename])) {
+	        $id = $this->map[$tablename];
+	        if(!$this->link[$id]) {
+	            $this->connect($id);
+	        }
+	        $this->curlink = $this->link[$id];
+	    } else {
+	        $this->curlink = $this->link[1];
+	    }
+	    return $this->tablepre.$tablename;
+	}
 }
 
 ?>
