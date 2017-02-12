@@ -92,6 +92,43 @@ class db_driver_mysql
 	    }
 	    return $this->version;
 	}
+	
+	public function query($sql, $silent = false, $unbuffered = false) {
+	    if(defined('DISCUZ_DEBUG') && DISCUZ_DEBUG) {
+	        $starttime = microtime(true);
+	    }
+	
+	    if('UNBUFFERED' === $silent) {
+	        $silent = false;
+	        $unbuffered = true;
+	    } elseif('SILENT' === $silent) {
+	        $silent = true;
+	        $unbuffered = false;
+	    }
+	
+	    $func = $unbuffered ? 'mysql_unbuffered_query' : 'mysql_query';
+	
+	    if(!($query = $func($sql, $this->curlink))) {
+	        if(in_array($this->errno(), array(2006, 2013)) && substr($silent, 0, 5) != 'RETRY') {
+	            $this->connect();
+	            return $this->query($sql, 'RETRY'.$silent);
+	        }
+	        if(!$silent) {
+	            $this->halt($this->error(), $this->errno(), $sql);
+	        }
+	    }
+	
+	    if(defined('DISCUZ_DEBUG') && DISCUZ_DEBUG) {
+	        $this->sqldebug[] = array($sql, number_format((microtime(true) - $starttime), 6), debug_backtrace(), $this->curlink);
+	    }
+	
+	    $this->querynum++;
+	    return $query;
+	}
+	function fetch_array($query, $result_type = MYSQL_ASSOC) {
+	    if($result_type == 'MYSQL_ASSOC') $result_type = MYSQL_ASSOC;
+	    return mysql_fetch_array($query, $result_type);
+	}
 }
 
 ?>
